@@ -20,7 +20,9 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
+import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.ComponentFactory;
 import org.osgi.service.component.ComponentInstance;
@@ -40,23 +42,36 @@ public class OSGiBenchmark2 {
     Dictionary<String, Object> configSmall;
     Dictionary<String, Object> configLarge;
 
-
     @Setup(Level.Trial)
-    public void prepare() throws BundleException, FileNotFoundException, InterruptedException {
+    public void prepare() throws BundleException, FileNotFoundException, InterruptedException, InvalidSyntaxException {
         Map config = new HashMap();
         felix = new Felix(config);
         felix.start();
         // TODO install all bundles for the test
         Path scr = Paths.get(
-                "/home/gitpod/.m2/repository/org/apache/felix/org.apache.felix.scr/2.1.14/org.apache.felix.scr-2.1.14.jar");
+                "/home/gitpod/.m2/repository/org/apache/felix/org.apache.felix.scr/2.1.0/org.apache.felix.scr-2.1.0.jar");
 
         Path testlib = Paths.get(
                 "/workspace/jmh-benchmarks/benchmarks/libs/io/jatoms/test/test.bundle/1.0.0/test.bundle-1.0.0.jar");
         felix.getBundleContext().installBundle("scr", new FileInputStream(scr.toFile())).start();
         felix.getBundleContext().installBundle("testlib", new FileInputStream(testlib.toFile())).start();
         Thread.sleep(1000);
-        ServiceReference<ComponentFactory> cmpFactory = felix.getBundleContext().getServiceReference(ComponentFactory.class);
-        factoryService = felix.getBundleContext().getService(cmpFactory);
+
+        System.out.println("Felix Bundle Context: " + felix.getBundleContext());
+        Bundle[] bundles = felix.getBundleContext().getBundles();
+        for (Bundle bundle : bundles) {
+            System.out.println("\tBundle: " + bundle.getSymbolicName());
+            ServiceReference<ComponentFactory> cmpFactory = bundle.getBundleContext().getServiceReference(ComponentFactory.class);
+            if(cmpFactory != null){
+                factoryService = felix.getBundleContext().getService(cmpFactory);
+                break;
+            }
+
+        }
+
+        // ServiceReference<ComponentFactory> cmpFactory =
+        // felix.getBundleContext().getServiceReference(ComponentFactory.class);
+        // factoryService = felix.getBundleContext().getService(cmpFactory);
 
         configSmall = new Hashtable<>();
         configSmall.put("test", 1);
@@ -83,14 +98,13 @@ public class OSGiBenchmark2 {
         return service.hashCode();
     }
 
-
     @Benchmark
     public int osgiInstanceCreationSmallConfig() {
         ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
         return service.hashCode();
     }
 
-     @Benchmark
+    @Benchmark
     public int osgiInstanceCreationLargeConfig() {
         ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
         return service.hashCode();
