@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.felix.framework.Felix;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -40,8 +41,8 @@ public class OSGiBenchmark2 {
     Dictionary<String, Object> configLarge;
 
 
-    @Setup
-    public void prepare() throws BundleException, FileNotFoundException {
+    @Setup(Level.Trial)
+    public void prepare() throws BundleException, FileNotFoundException, InterruptedException {
         Map config = new HashMap();
         felix = new Felix(config);
         felix.start();
@@ -50,9 +51,10 @@ public class OSGiBenchmark2 {
                 "/home/gitpod/.m2/repository/org/apache/felix/org.apache.felix.scr/2.1.14/org.apache.felix.scr-2.1.14.jar");
 
         Path testlib = Paths.get(
-                "/workspace/jmh-benchmarks/benchmarks/libs/de.unia.smds.test.jar");
-        felix.getBundleContext().installBundle("scr", new FileInputStream(scr.toFile()));
-        felix.getBundleContext().installBundle("testlib", new FileInputStream(testlib.toFile()));
+                "/workspace/jmh-benchmarks/benchmarks/libs/io/jatoms/test/test.bundle/1.0.0/test.bundle-1.0.0.jar");
+        felix.getBundleContext().installBundle("scr", new FileInputStream(scr.toFile())).start();
+        felix.getBundleContext().installBundle("testlib", new FileInputStream(testlib.toFile())).start();
+        Thread.sleep(1000);
         ServiceReference<ComponentFactory> cmpFactory = felix.getBundleContext().getServiceReference(ComponentFactory.class);
         factoryService = felix.getBundleContext().getService(cmpFactory);
 
