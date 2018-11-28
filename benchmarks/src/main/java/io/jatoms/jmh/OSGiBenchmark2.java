@@ -21,11 +21,13 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.ComponentFactory;
-import org.osgi.service.component.ComponentInstance;
 
 import de.unia.smds.test.ITest;
 
@@ -47,31 +49,22 @@ public class OSGiBenchmark2 {
         Map config = new HashMap();
         felix = new Felix(config);
         felix.start();
-        // TODO install all bundles for the test
+
+        // install bundles for the test
         Path scr = Paths.get(
                 "/home/gitpod/.m2/repository/org/apache/felix/org.apache.felix.scr/2.1.0/org.apache.felix.scr-2.1.0.jar");
 
         Path testlib = Paths.get(
                 "/workspace/jmh-benchmarks/benchmarks/libs/io/jatoms/test/test.bundle/1.0.0/test.bundle-1.0.0.jar");
-        felix.getBundleContext().installBundle("scr", new FileInputStream(scr.toFile())).start();
-        felix.getBundleContext().installBundle("testlib", new FileInputStream(testlib.toFile())).start();
-        Thread.sleep(1000);
+        Bundle scrBundle = felix.getBundleContext().installBundle("scr", new FileInputStream(scr.toFile()));
+        scrBundle.getBundleContext().addServiceListener(new MyServiceListener(scrBundle.getBundleContext()));
+
+        Bundle testlibBundle = felix.getBundleContext().installBundle("testlib", new FileInputStream(testlib.toFile()));
 
         System.out.println("Felix Bundle Context: " + felix.getBundleContext());
-        Bundle[] bundles = felix.getBundleContext().getBundles();
-        for (Bundle bundle : bundles) {
-            System.out.println("\tBundle: " + bundle.getSymbolicName());
-            ServiceReference<ComponentFactory> cmpFactory = bundle.getBundleContext().getServiceReference(ComponentFactory.class);
-            if(cmpFactory != null){
-                factoryService = felix.getBundleContext().getService(cmpFactory);
-                break;
-            }
 
-        }
-
-        // ServiceReference<ComponentFactory> cmpFactory =
-        // felix.getBundleContext().getServiceReference(ComponentFactory.class);
-        // factoryService = felix.getBundleContext().getService(cmpFactory);
+        scrBundle.start();
+        testlibBundle.start();
 
         configSmall = new Hashtable<>();
         configSmall.put("test", 1);
@@ -89,24 +82,48 @@ public class OSGiBenchmark2 {
         configLarge.put("Test10", 4);
         configLarge.put("Test11", "Test3");
         configLarge.put("Test12", "supergeilertext");
-
     }
 
     @Benchmark
     public int osgiInstanceCreationNoConfig() {
-        ComponentInstance<ITest> service = factoryService.newInstance(null);
-        return service.hashCode();
+        return 1;
+        // ComponentInstance<ITest> service = factoryService.newInstance(null);
+        // return service.hashCode();
     }
 
-    @Benchmark
-    public int osgiInstanceCreationSmallConfig() {
-        ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
-        return service.hashCode();
+    public static class MyServiceListener implements ServiceListener {
+
+        private BundleContext context;
+
+        public MyServiceListener(BundleContext context) {
+            this.context = context;
+        }
+
+        @Override
+        public void serviceChanged(ServiceEvent event) {
+            System.out.println("ServiceEvent: " + event.getServiceReference());
+            if (event.getType() == ServiceEvent.REGISTERED) {
+                ServiceReference<?> ref = event.getServiceReference();
+                if(ref != null){
+                    System.out.println("Reference: " + ref);
+                    System.out.println("Service: " + context.getService(ref));
+                } else {
+                    System.out.println("Reference was NULL");
+                }
+            }
+        }
+
     }
 
-    @Benchmark
-    public int osgiInstanceCreationLargeConfig() {
-        ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
-        return service.hashCode();
-    }
+    // @Benchmark
+    // public int osgiInstanceCreationSmallConfig() {
+    // ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
+    // return service.hashCode();
+    // }
+
+    // @Benchmark
+    // public int osgiInstanceCreationLargeConfig() {
+    // ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
+    // return service.hashCode();
+    // }
 }
