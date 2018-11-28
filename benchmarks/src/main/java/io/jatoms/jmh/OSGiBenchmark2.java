@@ -18,10 +18,12 @@ import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
@@ -37,6 +39,7 @@ import de.unia.smds.test.ITest;
 @Measurement(iterations = 5, time = 10, timeUnit = TimeUnit.SECONDS)
 public class OSGiBenchmark2 {
 
+    Felix felix;
     ComponentFactory<ITest> factoryService;
     Dictionary<String, Object> configSmall;
     Dictionary<String, Object> configLarge;
@@ -49,29 +52,28 @@ public class OSGiBenchmark2 {
         config.put("org.osgi.framework.bootdelegation", "org.osgi.service.component");
         config.put("org.osgi.framework.bundle.parent", "framework");
 
-        Felix felix = new Felix(config);
+        felix = new Felix(config);
         felix.start();
+
+        BundleContext context = felix.getBundleContext();
 
         // install bundles for the test
         Path scr = Paths.get(
-                "/home/gitpod/.m2/repository/org/apache/felix/org.apache.felix.scr/2.1.0/org.apache.felix.scr-2.1.0.jar");
+                "/workspace/jmh-benchmarks/benchmarks/libs/org/apache/felix/org.apache.felix.scr/2.1.0/org.apache.felix.scr-2.1.0.jar");
 
         Path testlib = Paths.get(
                 "/workspace/jmh-benchmarks/benchmarks/libs/io/jatoms/test/test.bundle/0.1.0/test.bundle-0.1.0.jar");
 
-        felix.getBundleContext().installBundle("scr", new FileInputStream(scr.toFile())).start();;
-        felix.getBundleContext().installBundle("testlib", new FileInputStream(testlib.toFile())).start();
-
-        System.out.println("Felix Bundle Context: " + felix.getBundleContext());
+        context.installBundle("scr", new FileInputStream(scr.toFile())).start();;
+        context.installBundle("testlib", new FileInputStream(testlib.toFile())).start();
 
         // wait for osgi to start all services we need
         Thread.sleep(1000);
 
         // the framework bundle has no service reference to ComponentFactory so we search the other bundles for such a reference
-        Bundle[] bundles = felix.getBundleContext().getBundles();
+        Bundle[] bundles = context.getBundles();
         for(Bundle bundle : bundles){
             ServiceReference<ComponentFactory> ref = bundle.getBundleContext().getServiceReference(ComponentFactory.class);
-            System.out.println("Reference: " + ref);
             if( ref != null ){
                 factoryService = bundle.getBundleContext().getService(ref);
                 break;
@@ -96,21 +98,30 @@ public class OSGiBenchmark2 {
         configLarge.put("Test12", "supergeilertext");
     }
 
+    @TearDown
+    public void shutdown(){
+        try {
+			felix.stop();
+		} catch (BundleException e) {
+			e.printStackTrace();
+		}
+    }
+
     @Benchmark
     public void osgiInstanceCreationNoConfig(Blackhole blackhole) {
         ComponentInstance<ITest> service = factoryService.newInstance(null);
         blackhole.consume(service);
     }
 
-    // @Benchmark
-    // public int osgiInstanceCreationSmallConfig() {
-    // ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
-    // return service.hashCode();
-    // }
+    @Benchmark
+    public void osgiInstanceCreationSmallConfig(Blackhole blackhole) {
+        ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
+        blackhole.consume(service);
+    }
 
-    // @Benchmark
-    // public int osgiInstanceCreationLargeConfig() {
-    // ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
-    // return service.hashCode();
-    // }
+    @Benchmark
+    public void osgiInstanceCreationLargeConfig(Blackhole blackhole) {
+        ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
+        blackhole.consume(service);
+    }
 }
