@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.felix.framework.Felix;
+import org.apache.felix.scr.impl.manager.ComponentFactoryImpl;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -62,9 +63,15 @@ public class OSGiBenchmark2 {
         for (Bundle bundle : bundles) {
             System.out.println("\tBundle: " + bundle.getSymbolicName());
             ServiceReference<ComponentFactory> cmpFactory = bundle.getBundleContext().getServiceReference(ComponentFactory.class);
+            System.out.println("\t\tServiceReference: " + cmpFactory);
             if(cmpFactory != null){
-                factoryService = felix.getBundleContext().getService(cmpFactory);
-                break;
+                System.out.println("\t\tService: " + bundle.getBundleContext().getService(cmpFactory));
+               ComponentInstance instance = bundle.getBundleContext().getService(cmpFactory).newInstance(null);
+                // System.out.println("\t\tService Class: " + bundle.getBundleContext().getService(cmpFactory).getClass());
+                // System.out.println("\t\tService Interfaces: " + bundle.getBundleContext().getService(cmpFactory).getClass().getInterfaces());
+                // System.out.println("\t\tEQUALS COMPFACTORY: " + (bundle.getBundleContext().getService(cmpFactory) instanceof ComponentFactory));
+            } else {
+                System.out.println("\t\tService: NULL");
             }
 
         }
@@ -98,15 +105,15 @@ public class OSGiBenchmark2 {
         return service.hashCode();
     }
 
-    @Benchmark
-    public int osgiInstanceCreationSmallConfig() {
-        ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
-        return service.hashCode();
-    }
+    // @Benchmark
+    // public int osgiInstanceCreationSmallConfig() {
+    //     ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
+    //     return service.hashCode();
+    // }
 
-    @Benchmark
-    public int osgiInstanceCreationLargeConfig() {
-        ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
-        return service.hashCode();
-    }
+    // @Benchmark
+    // public int osgiInstanceCreationLargeConfig() {
+    //     ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
+    //     return service.hashCode();
+    // }
 }
