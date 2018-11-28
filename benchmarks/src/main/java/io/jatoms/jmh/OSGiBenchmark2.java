@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.felix.framework.Felix;
+import org.apache.felix.scr.impl.manager.ComponentFactoryImpl;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -56,6 +57,7 @@ public class OSGiBenchmark2 {
 
         Path testlib = Paths.get(
                 "/workspace/jmh-benchmarks/benchmarks/libs/io/jatoms/test/test.bundle/1.0.0/test.bundle-1.0.0.jar");
+                
         Bundle scrBundle = felix.getBundleContext().installBundle("scr", new FileInputStream(scr.toFile()));
         scrBundle.getBundleContext().addServiceListener(new MyServiceListener(scrBundle.getBundleContext()));
 
