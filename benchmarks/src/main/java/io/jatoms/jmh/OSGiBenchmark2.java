@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.felix.framework.Felix;
-import org.apache.felix.scr.impl.manager.ComponentFactoryImpl;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -21,14 +20,16 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
+import org.osgi.framework.AllServiceListener;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceEvent;
-import org.osgi.framework.ServiceListener;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.ComponentFactory;
+import org.osgi.service.component.ComponentInstance;
 
 import de.unia.smds.test.ITest;
 
@@ -47,7 +48,11 @@ public class OSGiBenchmark2 {
 
     @Setup(Level.Trial)
     public void prepare() throws BundleException, FileNotFoundException, InterruptedException, InvalidSyntaxException {
-        Map config = new HashMap();
+        Map<String, Object> config = new HashMap<>();
+        // config.put("org.osgi.framework.system.packages.extra", "org.osgi.service.component");
+        config.put("org.osgi.framework.bootdelegation", "org.osgi.service.component");
+        config.put("org.osgi.framework.bundle.parent", "framework");
+
         felix = new Felix(config);
         felix.start();
 
@@ -56,10 +61,10 @@ public class OSGiBenchmark2 {
                 "/home/gitpod/.m2/repository/org/apache/felix/org.apache.felix.scr/2.1.0/org.apache.felix.scr-2.1.0.jar");
 
         Path testlib = Paths.get(
-                "/workspace/jmh-benchmarks/benchmarks/libs/io/jatoms/test/test.bundle/1.0.0/test.bundle-1.0.0.jar");
-                
+                "/workspace/jmh-benchmarks/benchmarks/libs/io/jatoms/test/test.bundle/0.1.0/test.bundle-0.1.0.jar");
+
         Bundle scrBundle = felix.getBundleContext().installBundle("scr", new FileInputStream(scr.toFile()));
-        scrBundle.getBundleContext().addServiceListener(new MyServiceListener(scrBundle.getBundleContext()));
+        // scrBundle.getBundleContext().addServiceListener(new MyServiceListener(scrBundle.getBundleContext()));
 
         Bundle testlibBundle = felix.getBundleContext().installBundle("testlib", new FileInputStream(testlib.toFile()));
 
@@ -67,6 +72,19 @@ public class OSGiBenchmark2 {
 
         scrBundle.start();
         testlibBundle.start();
+
+        Thread.sleep(1000);
+
+        Bundle[] bundles = felix.getBundleContext().getBundles();
+
+        for(Bundle bundle : bundles){
+            ServiceReference<ComponentFactory> ref = bundle.getBundleContext().getServiceReference(ComponentFactory.class);
+            System.out.println("Reference: " + ref);
+            if( ref != null ){
+                factoryService = bundle.getBundleContext().getService(ref);
+                break;
+            }
+        }
 
         configSmall = new Hashtable<>();
         configSmall.put("test", 1);
@@ -87,34 +105,9 @@ public class OSGiBenchmark2 {
     }
 
     @Benchmark
-    public int osgiInstanceCreationNoConfig() {
-        return 1;
-        // ComponentInstance<ITest> service = factoryService.newInstance(null);
-        // return service.hashCode();
-    }
-
-    public static class MyServiceListener implements ServiceListener {
-
-        private BundleContext context;
-
-        public MyServiceListener(BundleContext context) {
-            this.context = context;
-        }
-
-        @Override
-        public void serviceChanged(ServiceEvent event) {
-            System.out.println("ServiceEvent: " + event.getServiceReference());
-            if (event.getType() == ServiceEvent.REGISTERED) {
-                ServiceReference<?> ref = event.getServiceReference();
-                if(ref != null){
-                    System.out.println("Reference: " + ref);
-                    System.out.println("Service: " + context.getService(ref));
-                } else {
-                    System.out.println("Reference was NULL");
-                }
-            }
-        }
-
+    public void osgiInstanceCreationNoConfig(Blackhole blackhole) {
+        ComponentInstance<ITest> service = factoryService.newInstance(null);
+        blackhole.consume(service);
     }
 
     // @Benchmark
