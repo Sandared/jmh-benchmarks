@@ -46,8 +46,10 @@ public class OSGiBenchmark2 {
 
     @Setup(Level.Trial)
     public void prepare() throws BundleException, FileNotFoundException, InterruptedException, InvalidSyntaxException {
-        // Configure Felix to use the framework classloader and delegate the classloading for org.osgi.service.component to this one,
-        // as otherwise we get nasty classcastexceptions, as the framework and the bootstrapping code would have different instances of the same class
+        // Configure Felix to use the framework classloader and delegate the
+        // classloading for org.osgi.service.component to this one,
+        // as otherwise we get nasty classcastexceptions, as the framework and the
+        // bootstrapping code would have different instances of the same class
         Map<String, Object> config = new HashMap<>();
         config.put("org.osgi.framework.bootdelegation", "org.osgi.service.component");
         config.put("org.osgi.framework.bundle.parent", "framework");
@@ -64,17 +66,20 @@ public class OSGiBenchmark2 {
         Path testlib = Paths.get(
                 "/workspace/jmh-benchmarks/benchmarks/libs/io/jatoms/test/test.bundle/0.1.0/test.bundle-0.1.0.jar");
 
-        context.installBundle("scr", new FileInputStream(scr.toFile())).start();;
+        context.installBundle("scr", new FileInputStream(scr.toFile())).start();
+        ;
         context.installBundle("testlib", new FileInputStream(testlib.toFile())).start();
 
         // wait for osgi to start all services we need
         Thread.sleep(1000);
 
-        // the framework bundle has no service reference to ComponentFactory so we search the other bundles for such a reference
+        // the framework bundle has no service reference to ComponentFactory so we
+        // search the other bundles for such a reference
         Bundle[] bundles = context.getBundles();
-        for(Bundle bundle : bundles){
-            ServiceReference<ComponentFactory> ref = bundle.getBundleContext().getServiceReference(ComponentFactory.class);
-            if( ref != null ){
+        for (Bundle bundle : bundles) {
+            ServiceReference<ComponentFactory> ref = bundle.getBundleContext()
+                    .getServiceReference(ComponentFactory.class);
+            if (ref != null) {
                 factoryService = bundle.getBundleContext().getService(ref);
                 break;
             }
@@ -99,29 +104,30 @@ public class OSGiBenchmark2 {
     }
 
     @TearDown
-    public void shutdown(){
+    public void shutdown() {
         try {
-			felix.stop();
-		} catch (BundleException e) {
-			e.printStackTrace();
-		}
+            felix.stop();
+        } catch (BundleException e) {
+            e.printStackTrace();
+        }
     }
 
     @Benchmark
     public void osgiInstanceCreationNoConfig(Blackhole blackhole) {
         ComponentInstance<ITest> service = factoryService.newInstance(null);
+        service = null;
         blackhole.consume(service);
     }
 
-    @Benchmark
-    public void osgiInstanceCreationSmallConfig(Blackhole blackhole) {
-        ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
-        blackhole.consume(service);
-    }
+    // @Benchmark
+    // public void osgiInstanceCreationSmallConfig(Blackhole blackhole) {
+    // ComponentInstance<ITest> service = factoryService.newInstance(configSmall);
+    // blackhole.consume(service);
+    // }
 
-    @Benchmark
-    public void osgiInstanceCreationLargeConfig(Blackhole blackhole) {
-        ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
-        blackhole.consume(service);
-    }
+    // @Benchmark
+    // public void osgiInstanceCreationLargeConfig(Blackhole blackhole) {
+    // ComponentInstance<ITest> service = factoryService.newInstance(configLarge);
+    // blackhole.consume(service);
+    // }
 }
