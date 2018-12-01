@@ -15,6 +15,7 @@ mvn archetype:generate
 
 ## How to run these benchmarks
 ```
+Click on the Gitpod button above
 cd benchmarks
 mvn clean install
 java -jar target/benchmarks.jar
