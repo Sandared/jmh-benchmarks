@@ -1,6 +1,8 @@
-# First steps with JMH
+# First steps with JMH and OSGi
 
-## Setup
+[![Gitpod - Code Now](https://img.shields.io/badge/Gitpod-code%20now-blue.svg?longCache=true)](https://gitpod.io#https://github.com/Sandared/jmh-benchmarks/blob/master/benchmarks/src/main/java/io/jatoms/jmh/OSGiBenchmark2.java)
+
+## How to setup a new benchmark project
 ```
 mvn archetype:generate
     -DinteractiveMode=false
@@ -11,7 +13,7 @@ mvn archetype:generate
     -Dversion=1.0.0
 ```
 
-## Run
+## How to run these benchmarks
 ```
 cd benchmarks
 mvn clean install
