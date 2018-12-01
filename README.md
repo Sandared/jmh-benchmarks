@@ -1,6 +1,6 @@
 # First steps with JMH and OSGi
 
-[![Gitpod - Code Now](https://img.shields.io/badge/Gitpod-code%20now-blue.svg?longCache=true)](https://gitpod.io#https://github.com/Sandared/jmh-benchmarks/blob/master/benchmarks/src/main/java/io/jatoms/jmh/OSGiBenchmark2.java)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io#https://github.com/Sandared/jmh-benchmarks/blob/master/benchmarks/src/main/java/io/jatoms/jmh/OSGiBenchmark2.java)
 
 ## How to run these benchmarks
 ```
