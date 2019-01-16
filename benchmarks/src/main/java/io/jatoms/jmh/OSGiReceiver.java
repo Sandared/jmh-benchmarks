@@ -1,6 +1,6 @@
 package io.jatoms.jmh;
 
-public class OSGiReceiver {
+public class OSGiReceiver implements Receiver{
 
 	private int value;
 
